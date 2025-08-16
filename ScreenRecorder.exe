@@ -1,0 +1,81 @@
+using System;
+using System.Drawing;
+using System.IO;
+using AForge.Video;
+using AForge.Video.DirectShow;
+using AForge.Video.FFMPEG;
+
+namespace ScreenRecorder
+{
+    class Program
+    {
+        private static VideoFileWriter _videoWriter;
+        private static bool _isRecording;
+        private static string _outputFile;
+
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Программа записи экрана");
+            Console.WriteLine("Нажмите 'R' для начала записи");
+            Console.WriteLine("Нажмите 'S' для остановки записи");
+
+            _outputFile = "recording.mp4";
+            _videoWriter = new VideoFileWriter();
+
+            while (true)
+            {
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKeyInfo key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.R)
+                    {
+                        StartRecording();
+                    }
+                    else if (key.Key == ConsoleKey.S)
+                    {
+                        StopRecording();
+                    }
+                }
+
+                if (_isRecording)
+                {
+                    CaptureScreen();
+                }
+            }
+        }
+
+        private static void StartRecording()
+        {
+            if (!_isRecording)
+            {
+                _isRecording = true;
+                _videoWriter.Open(_outputFile, Screen.PrimaryScreen.Bounds.Width, 
+                    Screen.PrimaryScreen.Bounds.Height, 30, VideoCodec.MPEG4);
+                Console.WriteLine("Запись начата");
+            }
+        }
+
+        private static void StopRecording()
+        {
+            if (_isRecording)
+            {
+                _isRecording = false;
+                _videoWriter.Close();
+                Console.WriteLine("Запись остановлена");
+            }
+        }
+
+        private static void CaptureScreen()
+        {
+            using (Bitmap bitmap = new Bitmap(Screen.PrimaryScreen.Bounds.Width, 
+                Screen.PrimaryScreen.Bounds.Height))
+            {
+                using (Graphics graphics = bitmap.CreateGraphics())
+                {
+                    graphics.CopyFromScreen(0, 0, 0, 0, bitmap.Size);
+                }
+                _videoWriter.WriteVideoFrame(bitmap);
+            }
+        }
+    }
+}
