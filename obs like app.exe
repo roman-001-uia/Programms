@@ -1,0 +1,110 @@
+using System;
+using System.IO;
+using System.Drawing;
+using System.Windows.Forms;
+using AForge.Video;
+using AForge.Video.FFMPEG;
+using NAudio.Wave;
+
+namespace ScreenRecorderApp
+{
+    class Program
+    {
+        private static bool isRecording;
+        private static string outputFile;
+        private static VideoFileWriter videoWriter;
+        private static WaveOut waveOut;
+        private static WaveFileWriter waveWriter;
+
+        static void Main(string[] args)
+        {
+            Console.WriteLine("Экранный рекордер");
+            Console.WriteLine("Нажмите 'R' для начала записи");
+            Console.WriteLine("Нажмите 'S' для остановки записи");
+
+            outputFile = "recording.mp4";
+            videoWriter = new VideoFileWriter();
+            
+            while (true)
+            {
+                if (Console.KeyAvailable)
+                {
+                    ConsoleKeyInfo key = Console.ReadKey(true);
+                    if (key.Key == ConsoleKey.R)
+                    {
+                        StartRecording();
+                    }
+                    else if (key.Key == ConsoleKey.S)
+                    {
+                        StopRecording();
+                    }
+                }
+            }
+        }
+
+        private static void StartRecording()
+        {
+            if (!isRecording)
+            {
+                isRecording = true;
+                videoWriter.Open(outputFile, 
+                    Screen.PrimaryScreen.Bounds.Width, 
+                    Screen.PrimaryScreen.Bounds.Height, 
+                    30, VideoCodec.MPEG4);
+
+                // Инициализация записи аудио
+                var waveIn = new WasapiCapture();
+                waveIn.DataAvailable += WaveInDataAvailable;
+                waveIn.StartRecording();
+
+                Console.WriteLine("Запись начата");
+                CaptureScreen();
+            }
+        }
+
+        private static void StopRecording()
+        {
+            if (isRecording)
+            {
+                isRecording = false;
+                videoWriter.Close();
+                waveWriter.Close();
+                Console.WriteLine("Запись остановлена");
+            }
+        }
+
+        private static void CaptureScreen()
+        {
+            while (isRecording)
+            {
+                try
+                {
+                    using (Bitmap bitmap = new Bitmap(Screen.PrimaryScreen.Bounds.Width, 
+                        Screen.PrimaryScreen.Bounds.Height))
+                    {
+                        using (Graphics graphics = bitmap.CreateGraphics())
+                        {
+                            graphics.CopyFromScreen(0, 0, 0, 0, bitmap.Size);
+                            videoWriter.WriteVideoFrame(bitmap);
+                        }
+                    }
+                    Thread.Sleep(33); // ~30 FPS
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка: {ex.Message}");
+                }
+            }
+        }
+
+        private static void WaveInDataAvailable(object sender, WaveInEventArgs e)
+        {
+            if (waveWriter == null)
+            {
+                waveWriter = new WaveFileWriter("recording.wav", e.WaveFormat);
+            }
+            waveWriter.Write(e.Buffer, 0, e.BytesRecorded);
+        }
+    }
+}
+

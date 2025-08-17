@@ -1,0 +1,10 @@
+{
+  "name": "obs-like-app",
+  "version": "1.0.0",
+  "main": "main.js",
+  "dependencies": {
+    "electron": "^25.0.0",
+    "electron-builder": "^23.0.0"
+  }
+}
+
